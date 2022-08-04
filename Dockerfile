@@ -53,10 +53,8 @@ ARG BORG_VERSION=1.2.1
 # are not used and we have to assume that it just works
 ADD https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linuxnew64 /tmp/borg-linuxnew64
 
-RUN cp /tmp/borg-linuxnew64 /usr/local/bin/borg && \
-    chown root:root /usr/local/bin/borg && \
-    chmod 755 /usr/local/bin/borg && \
-    ln -s /usr/local/bin/borg /usr/local/bin/borgfs \
+RUN mv /tmp/borg-linuxnew64 /opt/borg && \
+    chmod +x /opt/borg
 
 FROM alpine
 
@@ -92,6 +90,11 @@ RUN ln -s /opt/entrypoint-demoter /usr/bin
 COPY --from=builder /opt/rclone /opt/rclone
 
 RUN ln -s /opt/rclone /usr/bin
+
+
+COPY --from=builder /opt/borg /opt/borg
+
+RUN ln -s /opt/borg /usr/bin
 
 
 COPY backup-loop.sh /opt/
