@@ -1,5 +1,5 @@
-[![Docker Pulls](https://img.shields.io/docker/pulls/itzg/mc-backup.svg)](https://hub.docker.com/r/itzg/mc-backup)
-[![release](https://github.com/itzg/docker-mc-backup/workflows/release/badge.svg?branch=multiarch)](https://github.com/itzg/docker-mc-backup/actions?query=workflow%3Arelease)
+[![Docker Pulls](https://img.shields.io/docker/pulls/panzer1119/mc-backup.svg)](https://hub.docker.com/r/panzer1119/mc-backup)
+[![release](https://github.com/Panzer1119/docker-mc-backup/workflows/release/badge.svg?branch=multiarch)](https://github.com/Panzer1119/docker-mc-backup/actions?query=workflow%3Arelease)
 [![Discord](https://img.shields.io/discord/660567679458869252?label=Discord&logo=discord)](https://discord.gg/DXfKpjB)
 
 Provides a side-car container to backup itzg/minecraft-server world data.
@@ -133,7 +133,7 @@ docker-compose exec backups backup now
 This mechanism can also be used to avoid a long running container completely by running a temporary container, such as:
 
 ```shell
-docker run --rm ...data and backup -v args... itzg/mc-backup backup now
+docker run --rm ...data and backup -v args... panzer1119/mc-backup backup now
 ```
 
 ## Example
@@ -185,7 +185,7 @@ services:
     volumes:
     - mc:/data
   backups:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       BACKUP_INTERVAL: "2h"
       # instead of network_mode below, could declare RCON_HOST
@@ -210,7 +210,7 @@ Setup the rclone configuration for the desired remote location
 docker run -it --rm -v rclone-config:/config/rclone rclone/rclone config
 ```
 
-Setup the `itzg/mc-backup` container with the following specifics
+Setup the `panzer1119/mc-backup` container with the following specifics
 - Set `BACKUP_METHOD` to `restic`
 - Set `RESTIC_PASSWORD` to a restic backup repository password to use
 - Use `rclone:` as the prefix on the `RESTIC_REPOSITORY`
@@ -230,7 +230,7 @@ services:
     volumes:
       - mc:/data
   backup:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       RCON_HOST: mc
       BACKUP_METHOD: restic

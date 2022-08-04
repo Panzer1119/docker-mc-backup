@@ -10,7 +10,7 @@ services:
     volumes:
       - mc:/data
   backup:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       RCON_HOST: mc
       BACKUP_METHOD: restic

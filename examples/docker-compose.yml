@@ -12,7 +12,7 @@ services:
     volumes:
       - mc:/data
   backups:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       BACKUP_INTERVAL: "2h"
       # instead of network_mode below, could declare RCON_HOST

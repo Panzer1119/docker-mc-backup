@@ -99,7 +99,7 @@ log() {
       cat -
     fi
     if [ "${level}" == "INTERNALERROR" ]; then
-      echo "Please report this: https://github.com/itzg/docker-mc-backup/issues"
+      echo "Please report this: https://github.com/Panzer1119/docker-mc-backup/issues"
     fi
   ) | awk -v level="${level}" '{ printf("%s %s %s\n", strftime("%FT%T%z"), level, $0); fflush(); }'
 } >&2

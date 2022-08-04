@@ -37,7 +37,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: itzg/mc-backup
+          images: panzer1119/mc-backup
           flavor: |
             latest=true
 

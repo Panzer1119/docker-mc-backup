@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v3.1.0
         with:
           push: true
-          tags: localhost:5000/itzg/mc-backup:latest
+          tags: localhost:5000/panzer1119/mc-backup:latest
 
       - name: Test simple backup and exclusion scenario with tar
         env:
