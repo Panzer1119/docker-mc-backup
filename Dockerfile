@@ -47,6 +47,16 @@ RUN mkdir -p /tmp/rclone && \
     mv /tmp/rclone/rclone-v${RCLONE_VERSION}-linux-${TARGETARCH}/rclone /opt/rclone && \
     chmod +x /opt/rclone
 
+ARG BORG_VERSION=1.2.1
+
+# NOTE: borg releases don't differentiate between amd64, arm v6 and v7, so TARGETARCH and TARGETVARIANT
+# are not used and we have to assume that it just works
+ADD https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linuxnew64 /tmp/borg-linuxnew64
+
+RUN cp /tmp/borg-linuxnew64 /usr/local/bin/borg && \
+    chown root:root /usr/local/bin/borg && \
+    chmod 755 /usr/local/bin/borg && \
+    ln -s /usr/local/bin/borg /usr/local/bin/borgfs \
 
 FROM alpine
 
