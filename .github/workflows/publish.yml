@@ -1,4 +1,4 @@
-name: Publish Docker Images for Development
+name: Publish Docker Images
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
       - 'master'
       - 'dev'
       - 'development'
+      - 'feature/**'
+      - 'fix/**'
+      - 'test/**'
     tags:
       - 'v*.*.*'
 
