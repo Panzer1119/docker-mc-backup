@@ -13,8 +13,8 @@ fi
 : "${BACKUP_INTERVAL:=${INTERVAL_SEC:-24h}}"
 : "${PAUSE_IF_NO_PLAYERS:=false}"
 : "${PLAYERS_ONLINE_CHECK_INTERVAL:=5m}"
-: "${BACKUP_METHOD:=tar}" # currently one of tar, restic, borg
-: "${TAR_COMPRESS_METHOD:=gzip}"  # bzip2 gzip zstd
+: "${BACKUP_METHOD:=tar}"        # currently one of tar, restic, borg
+: "${TAR_COMPRESS_METHOD:=gzip}" # bzip2 gzip zstd
 : "${ZSTD_PARAMETERS:=-3 --long=25 --single-thread}"
 : "${PRUNE_BACKUPS_DAYS:=7}"
 : "${PRUNE_RESTIC_RETENTION:=--keep-within ${PRUNE_BACKUP_DAYS:-7}d}"
@@ -28,7 +28,7 @@ fi
 : "${EXCLUDES:=*.jar,cache,logs}" # Comma separated list of glob(3) patterns
 : "${LINK_LATEST:=false}"
 : "${RESTIC_ADDITIONAL_TAGS:=mc_backups}" # Space separated list of restic tags
-: "${XDG_CONFIG_HOME:=/config}" # for rclone's base config path
+: "${XDG_CONFIG_HOME:=/config}"           # for rclone's base config path
 : "${ONE_SHOT:=false}"
 : "${TZ:=Etc/UTC}"
 : "${RCLONE_COMPRESS_METHOD:=gzip}"
@@ -128,14 +128,14 @@ retry() {
   readonly retries interval
   shift 2
 
-  if (( retries < 0 )); then
+  if ((retries < 0)); then
     local retries_msg="infinite"
   else
     local retries_msg="${retries}"
   fi
 
   local i=-1 # -1 since we will increment it before printing
-  while (( retries >= ++i )) || [ "${retries_msg}" != "${retries}" ]; do
+  while ((retries >= ++i)) || [ "${retries_msg}" != "${retries}" ]; do
     # Send SIGINT after 5 minutes. If it doesn't shut down in 30 seconds, kill it.
     if output="$(timeout --signal=SIGINT --kill-after=30s 5m "${@}" 2>&1 | tr '\n' '\t')"; then
       log INFO "Command executed successfully ${*}"
@@ -184,7 +184,6 @@ call_if_function_exists() {
 # backup() -> create backup. It's guaranteed that all data is already flushed to disk.
 # prune() -> prune old backups. PRUNE_BACKUPS_DAYS is guaranteed to be positive.
 
-
 tar() {
   _find_old_backups() {
     find "${DEST_DIR}" -maxdepth 1 -name "*.${backup_extension}" -mtime "+${PRUNE_BACKUPS_DAYS}" "${@}"
@@ -193,38 +192,38 @@ tar() {
   init() {
     mkdir -p "${DEST_DIR}"
     case "${TAR_COMPRESS_METHOD}" in
-        gzip)
-        readonly tar_parameters=("--gzip")
-        readonly backup_extension="tgz"
-        ;;
+    gzip)
+      readonly tar_parameters=("--gzip")
+      readonly backup_extension="tgz"
+      ;;
 
-        bzip2)
-        readonly tar_parameters=("--bzip2")
-        readonly backup_extension="bz2"
-        ;;
+    bzip2)
+      readonly tar_parameters=("--bzip2")
+      readonly backup_extension="bz2"
+      ;;
 
-        zstd)
-        readonly tar_parameters=("--use-compress-program" "zstd ${ZSTD_PARAMETERS}")
-        readonly backup_extension="tar.zst"
-        ;;
+    zstd)
+      readonly tar_parameters=("--use-compress-program" "zstd ${ZSTD_PARAMETERS}")
+      readonly backup_extension="tar.zst"
+      ;;
 
-        *)
-        log ERROR 'TAR_COMPRESS_METHOD is not valid!'
-        exit 1
-        ;;
+    *)
+      log ERROR 'TAR_COMPRESS_METHOD is not valid!'
+      exit 1
+      ;;
     esac
   }
   backup() {
     ts=$(date +"%Y%m%d-%H%M%S")
     outFile="${DEST_DIR}/${BACKUP_NAME}-${ts}.${backup_extension}"
     tries=3
-    while (( tries-- > 0 )); do
+    while ((tries-- > 0)); do
       log INFO "Backing up content in ${SRC_DIR} to ${outFile}"
       command tar "${excludes[@]}" "${tar_parameters[@]}" -cf "${outFile}" -C "${SRC_DIR}" . || exitCode=$?
       if [ ${exitCode:-0} -eq 0 ]; then
         break
       elif [ ${exitCode:-0} -eq 1 ]; then
-        if (( tries > 0 )); then
+        if ((tries > 0)); then
           log INFO "...retrying backup in 5 seconds"
           sleep 5
           continue
@@ -249,7 +248,6 @@ tar() {
   call_if_function_exists "${@}"
 }
 
-
 restic() {
   _delete_old_backups() {
     # shellcheck disable=SC2086
@@ -263,9 +261,9 @@ restic() {
       fi
   }
   init() {
-    if [ -z "${RESTIC_PASSWORD:-}" ] \
-        && [ -z "${RESTIC_PASSWORD_FILE:-}" ] \
-        && [ -z "${RESTIC_PASSWORD_COMMAND:-}" ]; then
+    if [ -z "${RESTIC_PASSWORD:-}" ] &&
+      [ -z "${RESTIC_PASSWORD_FILE:-}" ] &&
+      [ -z "${RESTIC_PASSWORD_COMMAND:-}" ]; then
       log ERROR "At least one of" RESTIC_PASSWORD{,_FILE,_COMMAND} "needs to be set!"
       return 1
     fi
@@ -290,7 +288,7 @@ restic() {
     fi
 
     # Used to construct tagging arguments and filters for snapshots
-    read -ra restic_tags <<< ${RESTIC_ADDITIONAL_TAGS}
+    read -ra restic_tags <<<${RESTIC_ADDITIONAL_TAGS}
     restic_tags+=("${BACKUP_NAME}")
     readonly restic_tags
 
@@ -298,11 +296,14 @@ restic() {
     restic_tags_arguments=()
     local tag
     for tag in "${restic_tags[@]}"; do
-        restic_tags_arguments+=( --tag "$tag")
+      restic_tags_arguments+=(--tag "$tag")
     done
     readonly restic_tags_arguments
     # Used for filtering backups to only match ours
-    restic_tags_filter="$(IFS=,; echo "${restic_tags[*]}")"
+    restic_tags_filter="$(
+      IFS=,
+      echo "${restic_tags[*]}"
+    )"
     readonly restic_tags_filter
   }
   backup() {
@@ -323,33 +324,33 @@ restic() {
 rclone() {
   _find_old_backups() {
     command rclone lsf --format "tp" "${RCLONE_REMOTE}:${RCLONE_DEST_DIR}" | grep ${BACKUP_NAME} | awk \
-            -v PRUNE_DATE="$(date '+%Y-%m-%d %H:%M:%S' --date="${PRUNE_BACKUPS_DAYS} days ago")" \
-            -v DESTINATION="${RCLONE_DEST_DIR%/}" \
-            'BEGIN { FS=";" } $1 < PRUNE_DATE { printf "%s/%s\n", DESTINATION, $2 }'
+      -v PRUNE_DATE="$(date '+%Y-%m-%d %H:%M:%S' --date="${PRUNE_BACKUPS_DAYS} days ago")" \
+      -v DESTINATION="${RCLONE_DEST_DIR%/}" \
+      'BEGIN { FS=";" } $1 < PRUNE_DATE { printf "%s/%s\n", DESTINATION, $2 }'
   }
   init() {
     # Check if rclone is installed and configured correctly
     mkdir -p "${DEST_DIR}"
     case "${RCLONE_COMPRESS_METHOD}" in
-        gzip)
-        readonly tar_parameters=("--gzip")
-        readonly backup_extension="tgz"
-        ;;
+    gzip)
+      readonly tar_parameters=("--gzip")
+      readonly backup_extension="tgz"
+      ;;
 
-        bzip2)
-        readonly tar_parameters=("--bzip2")
-        readonly backup_extension="bz2"
-        ;;
+    bzip2)
+      readonly tar_parameters=("--bzip2")
+      readonly backup_extension="bz2"
+      ;;
 
-        zstd)
-        readonly tar_parameters=("--use-compress-program" "zstd ${ZSTD_PARAMETERS}")
-        readonly backup_extension="tar.zst"
-        ;;
+    zstd)
+      readonly tar_parameters=("--use-compress-program" "zstd ${ZSTD_PARAMETERS}")
+      readonly backup_extension="tar.zst"
+      ;;
 
-        *)
-        log ERROR 'RCLONE_COMPRESS_METHOD is not valid!'
-        exit 1
-        ;;
+    *)
+      log ERROR 'RCLONE_COMPRESS_METHOD is not valid!'
+      exit 1
+      ;;
     esac
   }
   backup() {
@@ -372,13 +373,12 @@ rclone() {
     if [ -n "$(_find_old_backups)" ]; then
       log INFO "Pruning backup files older than ${PRUNE_BACKUPS_DAYS} days"
       _find_old_backups | tee \
-            >(awk '{ printf "Removing %s\n", $0 }' | log INFO) \
-            >(while read -r path; do command rclone deletefile "${RCLONE_REMOTE}:${path}"; done)
+        >(awk '{ printf "Removing %s\n", $0 }' | log INFO) \
+        >(while read -r path; do command rclone deletefile "${RCLONE_REMOTE}:${path}"; done)
     fi
   }
   call_if_function_exists "${@}"
 }
-
 
 borg() {
   _check() {
@@ -389,12 +389,12 @@ borg() {
       fi
   }
   init() {
-#    if [ -z "${RESTIC_PASSWORD:-}" ] \
-#        && [ -z "${RESTIC_PASSWORD_FILE:-}" ] \
-#        && [ -z "${RESTIC_PASSWORD_COMMAND:-}" ]; then
-#      log ERROR "At least one of" RESTIC_PASSWORD{,_FILE,_COMMAND} "needs to be set!"
-#      return 1
-#    fi
+    #    if [ -z "${RESTIC_PASSWORD:-}" ] \
+    #        && [ -z "${RESTIC_PASSWORD_FILE:-}" ] \
+    #        && [ -z "${RESTIC_PASSWORD_COMMAND:-}" ]; then
+    #      log ERROR "At least one of" RESTIC_PASSWORD{,_FILE,_COMMAND} "needs to be set!"
+    #      return 1
+    #    fi
     if [ -z "${BORG_REPO:-}" ]; then
       log ERROR "BORG_REPO is not set!"
       return 1
@@ -436,13 +436,12 @@ borg() {
     cd "${cwd}"
   }
   prune() {
-      log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
-      command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX}" "${BORG_REPO}"
-      command borg compact "${BORG_REPO}"
+    log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
+    command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX}" "${BORG_REPO}"
+    command borg compact "${BORG_REPO}"
   }
   call_if_function_exists "${@}"
 }
-
 
 ##########
 ## main ##
@@ -493,7 +492,6 @@ fi
 log INFO "waiting for rcon readiness..."
 retry ${RCON_RETRIES} ${RCON_RETRY_INTERVAL} rcon-cli save-on
 
-
 while true; do
 
   if retry ${RCON_RETRIES} ${RCON_RETRY_INTERVAL} rcon-cli save-off; then
@@ -514,7 +512,7 @@ while true; do
     exit 1
   fi
 
-  if (( PRUNE_BACKUPS_DAYS > 0 )); then
+  if ((PRUNE_BACKUPS_DAYS > 0)); then
     "${BACKUP_METHOD}" prune
   fi
 
@@ -524,7 +522,7 @@ while true; do
 
   # If BACKUP_INTERVAL is not a valid number (i.e. 24h), we want to sleep.
   # Only raw numeric value <= 0 will break
-  if (( BACKUP_INTERVAL <= 0 )) &>/dev/null; then
+  if ((BACKUP_INTERVAL <= 0)) &>/dev/null; then
     break
   fi
 
