@@ -38,12 +38,18 @@ fi
 : "${BORG_COMPRESS_METHOD:=lz4}"
 : "${BORG_ARCHIVE_PREFIX:=}"
 : "${BORG_ARCHIVE_SUFFIX:=}"
+: "${BORG_BASE_DIR:=/tmp/borg}"
+: "${BORG_RELOCATED_REPO_ACCESS_IS_OK:=yes}"
+: "${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:=yes}"
 export TZ
 
 export RCON_HOST
 export RCON_PORT
 export RCON_PASSWORD
 export XDG_CONFIG_HOME
+export BORG_BASE_DIR
+export BORG_RELOCATED_REPO_ACCESS_IS_OK
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK
 
 ###############
 ##  common   ##
@@ -375,15 +381,9 @@ rclone() {
 
 
 borg() {
-  _delete_old_backups() {
-#    # shellcheck disable=SC2086
-#    command restic forget --tag "${restic_tags_filter}" ${PRUNE_RESTIC_RETENTION} "${@}" #TODO
-    #TODO
-    log ERROR "Borg _delete_old_backups not implemented yet"
-  }
   _check() {
-      if ! output="$(command borg check :: 2>&1)"; then
-        log ERROR "Repository contains error! Aborting"
+      if ! output="$(command borg check "${BORG_REPO}" 2>&1)"; then
+        log ERROR "Borg repository contains errors! Aborting"
         <<<"${output}" log ERROR
         return 1
       fi
@@ -399,38 +399,29 @@ borg() {
       log ERROR "BORG_REPO is not set!"
       return 1
     fi
-    #TODO Borg Repo Init and Encryption
-#    if output="$(command restic snapshots 2>&1 >/dev/null)"; then
-#      log INFO "Repository already initialized"
-#      _check
-#    elif <<<"${output}" grep -q '^Is there a repository at the following location?$'; then
-#      log INFO "Initializing new restic repository..."
-#      command restic init | log INFO
-#    elif <<<"${output}" grep -q 'wrong password'; then
-#      <<<"${output}" log ERROR
-#      log ERROR "Wrong password provided to an existing repository?"
-#      return 1
-#    else
-#      <<<"${output}" log ERROR
-#      log INTERNALERROR "Unhandled restic repository state."
-#      return 2
-#    fi
-
-#    # Used to construct tagging arguments and filters for snapshots
-#    read -ra restic_tags <<< ${RESTIC_ADDITIONAL_TAGS}
-#    restic_tags+=("${BACKUP_NAME}")
-#    readonly restic_tags
-
-#    # Arguments to use to tag the snapshots with
-#    restic_tags_arguments=()
-#    local tag
-#    for tag in "${restic_tags[@]}"; do
-#        restic_tags_arguments+=( --tag "$tag")
-#    done
-#    readonly restic_tags_arguments
-#    # Used for filtering backups to only match ours
-#    restic_tags_filter="$(IFS=,; echo "${restic_tags[*]}")"
-#    readonly restic_tags_filter
+    if output="$(command borg info "${BORG_REPO}" 2>&1 >/dev/null)"; then
+      log INFO "Borg repository already initialized"
+      _check
+    else
+      log INFO "Initializing new borg repository..."
+      command borg init --encryption none --make-parent-dirs "${BORG_REPO}"
+      #TODO Encryption?
+    fi
+    #    if output="$(command restic snapshots 2>&1 >/dev/null)"; then
+    #      log INFO "Repository already initialized"
+    #      _check
+    #    elif <<<"${output}" grep -q '^Is there a repository at the following location?$'; then
+    #      log INFO "Initializing new restic repository..."
+    #      command restic init | log INFO
+    #    elif <<<"${output}" grep -q 'wrong password'; then
+    #      <<<"${output}" log ERROR
+    #      log ERROR "Wrong password provided to an existing repository?"
+    #      return 1
+    #    else
+    #      <<<"${output}" log ERROR
+    #      log INTERNALERROR "Unhandled restic repository state."
+    #      return 2
+    #    fi
   }
   backup() {
     log INFO "Backing up content in ${SRC_DIR}"
@@ -441,18 +432,13 @@ borg() {
     cwd=$(pwd)
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
     cd "${SRC_DIR}"
-    command borg create --stats --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" ::"${archive}" . | log INFO
+    command borg --progress create --stats --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
     cd "${cwd}"
   }
   prune() {
-    # We cannot use `grep -q` here - see https://github.com/restic/restic/issues/1466
-#    if _delete_old_backups --dry-run | grep '^remove [[:digit:]]* snapshots:$' >/dev/null; then
-#      log INFO "Pruning snapshots using ${PRUNE_RESTIC_RETENTION}"
-#      _delete_old_backups --prune | log INFO
-#      _check | log INFO
-#    fi
-    #TODO
-    log ERROR "Borg prune not implemented yet"
+      log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
+      command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX}" "${BORG_REPO}"
+      command borg compact "${BORG_REPO}"
   }
   call_if_function_exists "${@}"
 }
