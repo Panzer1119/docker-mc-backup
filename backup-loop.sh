@@ -437,7 +437,7 @@ borg() {
   }
   prune() {
     log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
-    command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX}" "${BORG_REPO}"
+    command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}" "${BORG_REPO}"
     command borg compact "${BORG_REPO}"
   }
   call_if_function_exists "${@}"
