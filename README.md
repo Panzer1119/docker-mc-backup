@@ -123,7 +123,7 @@ Borg also supports encrypted repositories, but for now it's not implemented here
 
 There are a few special environment variables for the borg method.
 
-- `BORG_REPO` is the path or url to the [borg repository](https://borgbackup.readthedocs.io/en/stable/usage/general.html#repository-urls)
+- `BORG_REPO`=/borg is the path or url to the [borg repository](https://borgbackup.readthedocs.io/en/stable/usage/general.html#repository-urls)
 - `BORG_COMPRESS_METHOD`=lz4 [available compression methods](https://borgbackup.readthedocs.io/en/stable/internals/data-structures.html#compression)
 - `BORG_ARCHIVE_PREFIX` is the prefix that gets prepended to the borg archvie name
 - `BORG_ARCHIVE_SUFFIX` is the suffix that gets appended to the borg archvie name
@@ -142,6 +142,8 @@ Other parameters such as `PRUNE_BACKUPS_DAYS`, `EXCLUDES`, and `BACKUP_NAME` are
   Should be attached read-only to the same volume as the `/data` of the `itzg/minecraft-server` container
 - `/backups` :
   The volume where incremental tgz files will be created, if using tar backup method.
+- `/borg` :
+  The volume where the borg repository is located, if using borg backup method and a local repository.
 
 ## On-demand backups
 
