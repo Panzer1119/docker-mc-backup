@@ -41,6 +41,7 @@ fi
 : "${BORG_BASE_DIR:=/tmp/borg}"
 : "${BORG_RELOCATED_REPO_ACCESS_IS_OK:=yes}"
 : "${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:=yes}"
+: "${VERBOSE:=false}"
 export TZ
 
 export RCON_HOST
