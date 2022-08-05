@@ -34,7 +34,7 @@ fi
 : "${RCLONE_COMPRESS_METHOD:=gzip}"
 : "${RCLONE_REMOTE:=}"
 : "${RCLONE_DEST_DIR:=}"
-: "${BORG_REPO:=}"
+: "${BORG_REPO:=/borg}"
 : "${BORG_COMPRESS_METHOD:=lz4}"
 : "${BORG_ARCHIVE_PREFIX:=}"
 : "${BORG_ARCHIVE_SUFFIX:=}"
