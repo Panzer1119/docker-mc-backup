@@ -116,8 +116,25 @@ volumes:
 ```
 
 ##### `borg` backup method
+[Borg](https://www.borgbackup.org/) deduplicates and compresses the files and stores them in a repository which can be on the local host or a remote host.
+See [borg documentation](https://borgbackup.readthedocs.io/) for more information.
 
-**TODO**
+Borg also supports encrypted repositories, but for now it's not implemented here, therefore it creates an unencrypted repository.
+
+There are a few special environment variables for the borg method.
+
+- `BORG_REPO` is the path or url to the [borg repository](https://borgbackup.readthedocs.io/en/stable/usage/general.html#repository-urls)
+- `BORG_COMPRESS_METHOD`=lz4 [available compression methods](https://borgbackup.readthedocs.io/en/stable/internals/data-structures.html#compression)
+- `BORG_ARCHIVE_PREFIX` is the prefix that gets prepended to the borg archvie name
+- `BORG_ARCHIVE_SUFFIX` is the suffix that gets appended to the borg archvie name
+
+And some advanced environment variables, which not need to be edited, but could.
+
+- `BORG_BASE_DIR`=/tmp/borg is the path to the borg base directory, where borg stores its cache and other data
+- `BORG_RELOCATED_REPO_ACCESS_IS_OK`=yes allows borg to use the repository even if it's been relocated
+- `BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK`=yes allows borg to use the repository even if it's unknown to it (and unencrypted), which can happen, when the borg base directory is not persisted on the host
+
+Other parameters such as `PRUNE_BACKUPS_DAYS`, `EXCLUDES`, and `BACKUP_NAME` are all used as well.
 
 ## Volumes
 
