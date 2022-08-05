@@ -440,7 +440,7 @@ borg() {
     local ts
     local cwd
     local archive
-    ts=$(date +"%Y%m%d-%H%M%S")
+    ts=$(date --utc +"%Y%m%d-%H%M%S")
     #ts=$(date --utc --iso-8601=seconds) # Nicer ISO 8601 Format
     cwd=$(pwd)
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
