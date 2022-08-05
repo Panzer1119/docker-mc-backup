@@ -424,13 +424,13 @@ borg() {
     #    fi
   }
   backup() {
-    log INFO "Backing up content in ${SRC_DIR}"
     local ts
     local cwd
     local archive
     ts=$(date +"%Y%m%d-%H%M%S")
     cwd=$(pwd)
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
+    log INFO "Backing up content in ${SRC_DIR} to ${BORG_REPO}::${archive}"
     cd "${SRC_DIR}"
     command borg --progress create --stats --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
     cd "${cwd}"
