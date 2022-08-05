@@ -400,6 +400,18 @@ borg() {
       log ERROR "BORG_REPO is not set!"
       return 1
     fi
+    borg_common_options=()
+    borg_options=()
+    if [ "${DEBUG:-false}" == "true" ]; then
+      borg_common_options+=(--debug)
+    fi
+    if [ "${VERBOSE:-false}" == "true" ]; then
+      borg_common_options+=(--verbose)
+      borg_common_options+=(--progress)
+      borg_options+=(--stats)
+    fi
+    readonly borg_common_options
+    readonly borg_options
     if output="$(command borg info "${BORG_REPO}" 2>&1 >/dev/null)"; then
       log INFO "Borg repository already initialized"
       _check
