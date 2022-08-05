@@ -53,8 +53,12 @@ ARG BORG_VERSION=1.2.1
 # are not used and we have to assume that it just works
 ADD https://github.com/borgbackup/borg/releases/download/${BORG_VERSION}/borg-linuxnew64 /tmp/borg-linuxnew64
 
-RUN mv /tmp/borg-linuxnew64 /opt/borg && \
-    chmod +x /opt/borg
+#RUN mv /tmp/borg-linuxnew64 /opt/borg && \
+#    chown root:root /opt/borg && \
+#    chmod 755 /opt/borg
+
+#RUN apk add --no-cache borgbackup
+
 
 FROM alpine
 
@@ -92,9 +96,15 @@ COPY --from=builder /opt/rclone /opt/rclone
 RUN ln -s /opt/rclone /usr/bin
 
 
-COPY --from=builder /opt/borg /opt/borg
+#COPY --from=builder /opt/borg /opt/borg
 
-RUN ln -s /opt/borg /usr/bin
+#RUN ln -s /opt/borg /usr/bin
+
+#COPY --from=builder /usr/bin/borg /usr/bin
+
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && \
+    echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+    apk add --no-cache --latest borgbackup
 
 
 COPY backup-loop.sh /opt/
