@@ -103,7 +103,7 @@ log() {
     # If any arguments are passed besides log level
     if [ "$#" -ge 1 ]; then
       # then use them as log message(s)
-      <<<"${*}" cat -
+      cat <<<"${*}" -
     else
       # otherwise read log messages from standard input
       cat -
@@ -254,11 +254,11 @@ restic() {
     command restic forget --tag "${restic_tags_filter}" ${PRUNE_RESTIC_RETENTION} "${@}"
   }
   _check() {
-      if ! output="$(command restic check 2>&1)"; then
-        log ERROR "Repository contains error! Aborting"
-        <<<"${output}" log ERROR
-        return 1
-      fi
+    if ! output="$(command restic check 2>&1)"; then
+      log ERROR "Repository contains error! Aborting"
+      log <<<"${output}" ERROR
+      return 1
+    fi
   }
   init() {
     if [ -z "${RESTIC_PASSWORD:-}" ] &&
@@ -274,15 +274,15 @@ restic() {
     if output="$(command restic snapshots 2>&1 >/dev/null)"; then
       log INFO "Repository already initialized"
       _check
-    elif <<<"${output}" grep -q '^Is there a repository at the following location?$'; then
+    elif grep <<<"${output}" -q '^Is there a repository at the following location?$'; then
       log INFO "Initializing new restic repository..."
       command restic init | log INFO
-    elif <<<"${output}" grep -q 'wrong password'; then
-      <<<"${output}" log ERROR
+    elif grep <<<"${output}" -q 'wrong password'; then
+      log <<<"${output}" ERROR
       log ERROR "Wrong password provided to an existing repository?"
       return 1
     else
-      <<<"${output}" log ERROR
+      log <<<"${output}" ERROR
       log INTERNALERROR "Unhandled restic repository state."
       return 2
     fi
@@ -382,11 +382,11 @@ rclone() {
 
 borg() {
   _check() {
-      if ! output="$(command borg check "${BORG_REPO}" 2>&1)"; then
-        log ERROR "Borg repository contains errors! Aborting"
-        <<<"${output}" log ERROR
-        return 1
-      fi
+    if ! output="$(command borg check "${BORG_REPO}" 2>&1)"; then
+      log ERROR "Borg repository contains errors! Aborting"
+      log <<<"${output}" ERROR
+      return 1
+    fi
   }
   init() {
     #    if [ -z "${RESTIC_PASSWORD:-}" ] \
