@@ -417,7 +417,7 @@ borg() {
       _check
     else
       log INFO "Initializing new borg repository..."
-      command borg init --encryption none --make-parent-dirs "${BORG_REPO}"
+      command borg "${borg_common_options[@]}" init --encryption none --make-parent-dirs "${BORG_REPO}"
       #TODO Encryption?
     fi
     #    if output="$(command restic snapshots 2>&1 >/dev/null)"; then
@@ -445,13 +445,13 @@ borg() {
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
     log INFO "Backing up content in ${SRC_DIR} to ${BORG_REPO}::${archive}"
     cd "${SRC_DIR}"
-    command borg --progress create --stats --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
+    command borg "${borg_common_options[@]}" create "${borg_options[@]}" --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
     cd "${cwd}"
   }
   prune() {
     log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
-    command borg --progress prune --stats --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}" "${BORG_REPO}"
-    command borg compact "${BORG_REPO}"
+    command borg "${borg_common_options[@]}" prune "${borg_options[@]}" --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}" "${BORG_REPO}"
+    command borg "${borg_common_options[@]}" compact "${BORG_REPO}"
   }
   call_if_function_exists "${@}"
 }
