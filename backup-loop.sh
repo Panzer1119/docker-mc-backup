@@ -441,6 +441,7 @@ borg() {
     local cwd
     local archive
     ts=$(date +"%Y%m%d-%H%M%S")
+    #ts=$(date --utc --iso-8601=seconds) # Nicer ISO 8601 Format
     cwd=$(pwd)
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
     log INFO "Backing up content in ${SRC_DIR} to ${BORG_REPO}::${archive}"
