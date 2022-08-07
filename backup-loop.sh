@@ -432,84 +432,86 @@ borg() {
     borg_keep_daily=-1
     borg_keep_hourly=-1
     borg_keep_minutely=-1
-    mapfile -t borg_prune_gfs_array < <(echo "${BORG_PRUNE_GFS}" | tr "," "\n")
-    local unit
-    local value
-    for i in "${borg_prune_gfs_array[@]}"; do
-      unit="${i: -1}"
-      value="${i:: -1}"
-      #log INFO "$unit: $value"
-      case "${unit}" in
-
-      y)
-        #log INFO "Yearly"
-        borg_keep_yearly="${value}"
-        ;;
-
-      m)
-        #log INFO "Monthly"
-        borg_keep_monthly="${value}"
-        ;;
-
-      w)
-        #log INFO "weekly"
-        borg_keep_weekly="${value}"
-        ;;
-
-      d)
-        #log INFO "daily"
-        borg_keep_daily="${value}"
-        ;;
-
-      H)
-        #log INFO "hourly"
-        borg_keep_hourly="${value}"
-        ;;
-
-      M)
-        #log INFO "minutely"
-        borg_keep_minutely="${value}"
-        ;;
-
-      *)
-        log ERROR "Unknown unit \"${unit}\" in BORG_PRUNE_GFS"
-        return 1
-        ;;
-      esac
-    done
     borg_keep_gfs_log=()
-    if ((borg_keep_minutely > -1)); then
-      borg_options_prune+=(--keep-minutely "${borg_keep_minutely}")
-      borg_keep_gfs_log+=("${borg_keep_minutely} minutely")
-      borg_use_gfs=true
-    fi
-    if ((borg_keep_hourly > -1)); then
-      borg_options_prune+=(--keep-hourly "${borg_keep_hourly}")
-      borg_keep_gfs_log+=("${borg_keep_hourly} hourly")
-      borg_use_gfs=true
-    fi
-    if ((borg_keep_daily > -1)); then
-      borg_options_prune+=(--keep-daily "${borg_keep_daily}")
-      borg_keep_gfs_log+=("${borg_keep_daily} daily")
-      borg_use_gfs=true
-    fi
-    if ((borg_keep_weekly > -1)); then
-      borg_options_prune+=(--keep-weekly "${borg_keep_weekly}")
-      borg_keep_gfs_log+=("${borg_keep_weekly} weekly")
-      borg_use_gfs=true
-    fi
-    if ((borg_keep_monthly > -1)); then
-      borg_options_prune+=(--keep-monthly "${borg_keep_monthly}")
-      borg_keep_gfs_log+=("${borg_keep_monthly} monthly")
-      borg_use_gfs=true
-    fi
-    if ((borg_keep_yearly > -1)); then
-      borg_options_prune+=(--keep-yearly "${borg_keep_yearly}")
-      borg_keep_gfs_log+=("${borg_keep_yearly} yearly")
-      borg_use_gfs=true
-    fi
-    if [ "${borg_use_gfs}" == "false" ]; then
-      borg_options_prune+=(--keep-within "${PRUNE_BACKUPS_DAYS}d")
+    if [ -n "${BORG_PRUNE_GFS}" ]; then
+      mapfile -t borg_prune_gfs_array < <(echo "${BORG_PRUNE_GFS}" | tr "," "\n")
+      local unit
+      local value
+      for i in "${borg_prune_gfs_array[@]}"; do
+        unit="${i: -1}"
+        value="${i::-1}"
+        #log INFO "$unit: $value"
+        case "${unit}" in
+
+        y)
+          #log INFO "Yearly"
+          borg_keep_yearly="${value}"
+          ;;
+
+        m)
+          #log INFO "Monthly"
+          borg_keep_monthly="${value}"
+          ;;
+
+        w)
+          #log INFO "weekly"
+          borg_keep_weekly="${value}"
+          ;;
+
+        d)
+          #log INFO "daily"
+          borg_keep_daily="${value}"
+          ;;
+
+        H)
+          #log INFO "hourly"
+          borg_keep_hourly="${value}"
+          ;;
+
+        M)
+          #log INFO "minutely"
+          borg_keep_minutely="${value}"
+          ;;
+
+        *)
+          log ERROR "Unknown unit \"${unit}\" in BORG_PRUNE_GFS"
+          return 1
+          ;;
+        esac
+      done
+      if ((borg_keep_minutely > -1)); then
+        borg_options_prune+=(--keep-minutely "${borg_keep_minutely}")
+        borg_keep_gfs_log+=("${borg_keep_minutely} minutely")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_hourly > -1)); then
+        borg_options_prune+=(--keep-hourly "${borg_keep_hourly}")
+        borg_keep_gfs_log+=("${borg_keep_hourly} hourly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_daily > -1)); then
+        borg_options_prune+=(--keep-daily "${borg_keep_daily}")
+        borg_keep_gfs_log+=("${borg_keep_daily} daily")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_weekly > -1)); then
+        borg_options_prune+=(--keep-weekly "${borg_keep_weekly}")
+        borg_keep_gfs_log+=("${borg_keep_weekly} weekly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_monthly > -1)); then
+        borg_options_prune+=(--keep-monthly "${borg_keep_monthly}")
+        borg_keep_gfs_log+=("${borg_keep_monthly} monthly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_yearly > -1)); then
+        borg_options_prune+=(--keep-yearly "${borg_keep_yearly}")
+        borg_keep_gfs_log+=("${borg_keep_yearly} yearly")
+        borg_use_gfs=true
+      fi
+      if [ "${borg_use_gfs}" == "false" ]; then
+        borg_options_prune+=(--keep-within "${PRUNE_BACKUPS_DAYS}d")
+      fi
     fi
     readonly borg_options_prune
     #log INFO "borg_options_prune: ${borg_options_prune[*]}"
@@ -551,7 +553,7 @@ borg() {
       for i in "${borg_keep_gfs_log[@]}"; do
         joined+="${i}, "
       done
-      log INFO "Pruning borg archives, keeping ${joined:: -2} archives"
+      log INFO "Pruning borg archives, keeping ${joined::-2} archives"
     fi
     command borg "${borg_common_options[@]}" prune "${borg_options_prune[@]}" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-" "${BORG_REPO}"
     command borg "${borg_common_options[@]}" compact "${BORG_REPO}"
