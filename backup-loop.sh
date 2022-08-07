@@ -437,7 +437,7 @@ borg() {
     local value
     for i in "${borg_prune_gfs_array[@]}"; do
       unit="${i: -1}"
-      value="${i::-1}"
+      value="${i:: -1}"
       #log INFO "$unit: $value"
       case "${unit}" in
 
