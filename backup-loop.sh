@@ -432,7 +432,7 @@ borg() {
     borg_keep_daily=-1
     borg_keep_hourly=-1
     borg_keep_minutely=-1
-    borg_prune_gfs_array=($(echo "${BORG_PRUNE_GFS}" | tr "," "\n"))
+    mapfile -t borg_prune_gfs_array < <(echo "${BORG_PRUNE_GFS}" | tr "," "\n")
     local unit
     local value
     for i in "${borg_prune_gfs_array[@]}"; do
