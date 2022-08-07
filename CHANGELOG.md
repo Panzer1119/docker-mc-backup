@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+### [1.1.2](https://github.com/Panzer1119/docker-mc-backup/compare/v1.1.1...v1.1.2) (2022-08-07)
+
+
+### Bug Fixes
+
+* **borg:** add check if BORG_PRUNE_GFS is set and if not skip the parsing of it ([8f95916](https://github.com/Panzer1119/docker-mc-backup/commit/8f95916e4df4b17ac5415d7482b50cd62a7956da))
+* **borg:** add default keep argument to prune command ([34870d1](https://github.com/Panzer1119/docker-mc-backup/commit/34870d1ffa15f161f1c4d17ecff384eaece91983))
+* **borg:** missing space in value substring ([7f2080f](https://github.com/Panzer1119/docker-mc-backup/commit/7f2080f79965f58f7b49cc0baa07d61b8dc270fa))
+
 ### [1.1.1](https://github.com/Panzer1119/docker-mc-backup/compare/v1.1.0...v1.1.1) (2022-08-07)
 
 
