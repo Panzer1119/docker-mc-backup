@@ -127,6 +127,16 @@ There are a few special environment variables for the borg method.
 - `BORG_COMPRESS_METHOD`=lz4 [available compression methods](https://borgbackup.readthedocs.io/en/stable/internals/data-structures.html#compression)
 - `BORG_ARCHIVE_PREFIX` is the prefix that gets prepended to the borg archvie name
 - `BORG_ARCHIVE_SUFFIX` is the suffix that gets appended to the borg archvie name
+- `BORG_PRUNE_GFS` takes multiple arguments (separated by commas) of the form `<count><unit>` and enables the [GFS](https://en.wikipedia.org/wiki/Backup_rotation_scheme#Grandfather-father-son) retention policy.\
+  This retention policy will keep an `count` amount of archives in the duration of the `unit`.\
+  Example: `4m,3d,2H` will keep 4 monthly, 3 daily and 2 hourly archives.\
+  Available units:
+  - `M` minutely
+  - `H` hourly
+  - `d` daily
+  - `w` weekly
+  - `m` monthly
+  - `y` yearly
 
 And some advanced environment variables, which not need to be edited, but could.
 
