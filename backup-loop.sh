@@ -401,17 +401,20 @@ borg() {
       return 1
     fi
     borg_common_options=()
-    borg_options=()
+    borg_options_create=()
+    borg_options_prune=()
     if [ "${DEBUG:-false}" == "true" ]; then
       borg_common_options+=(--debug)
     fi
     if [ "${VERBOSE:-false}" == "true" ]; then
       borg_common_options+=(--verbose)
       borg_common_options+=(--progress)
-      borg_options+=(--stats)
+      borg_options_create+=(--stats)
+      borg_options_prune+=(--stats)
     fi
     readonly borg_common_options
-    readonly borg_options
+    readonly borg_options_create
+    readonly borg_options_prune
     if output="$(command borg info "${BORG_REPO}" 2>&1 >/dev/null)"; then
       log INFO "Borg repository already initialized"
       _check
@@ -446,12 +449,12 @@ borg() {
     archive="${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-${ts}${BORG_ARCHIVE_SUFFIX:=}"
     log INFO "Backing up content in ${SRC_DIR} to ${BORG_REPO}::${archive}"
     cd "${SRC_DIR}"
-    command borg "${borg_common_options[@]}" create "${borg_options[@]}" --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
+    command borg "${borg_common_options[@]}" create "${borg_options_create[@]}" --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPO}"::"${archive}" . | log INFO
     cd "${cwd}"
   }
   prune() {
     log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
-    command borg "${borg_common_options[@]}" prune "${borg_options[@]}" --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-" "${BORG_REPO}"
+    command borg "${borg_common_options[@]}" prune "${borg_options_prune[@]}" --keep-within "${PRUNE_BACKUPS_DAYS}d" --prefix "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-" "${BORG_REPO}"
     command borg "${borg_common_options[@]}" compact "${BORG_REPO}"
   }
   call_if_function_exists "${@}"
