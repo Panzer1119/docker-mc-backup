@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.1.0](https://github.com/Panzer1119/docker-mc-backup/compare/v1.0.0...v1.1.0) (2022-08-07)
+
+
+### Features
+
+* **borg:** implement retention policy Grandfather-father-son ([efcfb37](https://github.com/Panzer1119/docker-mc-backup/commit/efcfb375bcb2f1e71d19d0ff4911b44a421c7fc4))
+
+
+### Bug Fixes
+
+* **borg:** prefix when pruning with borg ([9e10bd0](https://github.com/Panzer1119/docker-mc-backup/commit/9e10bd015fde84eb83c9ffe23c841c36ead2a724))
+
 ## 1.0.0 (2022-08-05)
 
 
