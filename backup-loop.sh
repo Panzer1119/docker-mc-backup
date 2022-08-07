@@ -509,9 +509,9 @@ borg() {
         borg_keep_gfs_log+=("${borg_keep_yearly} yearly")
         borg_use_gfs=true
       fi
-      if [ "${borg_use_gfs}" == "false" ]; then
-        borg_options_prune+=(--keep-within "${PRUNE_BACKUPS_DAYS}d")
-      fi
+    fi
+    if [ "${borg_use_gfs}" == "false" ]; then
+      borg_options_prune+=(--keep-within "${PRUNE_BACKUPS_DAYS}d")
     fi
     readonly borg_options_prune
     #log INFO "borg_options_prune: ${borg_options_prune[*]}"
