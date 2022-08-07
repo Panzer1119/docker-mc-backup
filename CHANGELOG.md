@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+### [1.1.1](https://github.com/Panzer1119/docker-mc-backup/compare/v1.1.0...v1.1.1) (2022-08-07)
+
+
+### Bug Fixes
+
+* **borg:** use mapfile to split command output instead of unquoted command expansion in an array ([5a3c8b3](https://github.com/Panzer1119/docker-mc-backup/commit/5a3c8b3c76ec99d4a139587353e25237a63334d6))
+
 ## [1.1.0](https://github.com/Panzer1119/docker-mc-backup/compare/v1.0.0...v1.1.0) (2022-08-07)
 
 
