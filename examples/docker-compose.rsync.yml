@@ -14,7 +14,7 @@ services:
   # "init" container for mc to restore the data volume when empty
   restore-backup:
     # Same image as mc, but any base image with bash and tar will work
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     user: "1000"
     restart: no
     entrypoint: restore-tar-backup
@@ -24,7 +24,7 @@ services:
       # Must be same mount as backups service, but can be read-only
       - ./mc-backups:/backups:ro
   backups:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     user: "1000"
     depends_on:
       mc:

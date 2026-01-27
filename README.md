@@ -1,5 +1,5 @@
-[![Docker Pulls](https://img.shields.io/docker/pulls/itzg/mc-backup.svg)](https://hub.docker.com/r/itzg/mc-backup)
-[![Build](https://github.com/itzg/docker-mc-backup/actions/workflows/build.yml/badge.svg)](https://github.com/itzg/docker-mc-backup/actions/workflows/build.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/panzer1119/mc-backup.svg)](https://hub.docker.com/r/panzer1119/mc-backup)
+[![Build](https://github.com/panzer1119/docker-mc-backup/actions/workflows/build.yml/badge.svg)](https://github.com/panzer1119/docker-mc-backup/actions/workflows/build.yml)
 [![Discord](https://img.shields.io/discord/660567679458869252?label=Discord&logo=discord)](https://discord.gg/DXfKpjB)
 
 Provides a side-car container to back up [itzg/minecraft-server](https://github.com/itzg/docker-minecraft-server) server data. Backups are coordinated automatically by using RCON to flush data, pause writes, and resume after backup is completed. 
@@ -75,7 +75,7 @@ The time is in UTC timezone by default, but if you want to use your servers loca
 
 ```yaml
 backup:
-  image: itzg/mc-backup
+  image: panzer1119/mc-backup
   restart: unless-stopped
   environment:
     CRON_SCHEDULE: "0 4 * * *"
@@ -184,7 +184,7 @@ volumes:
 ## Volumes
 
 - `/data` :
-  Should be attached read-only to the same volume as the `/data` of the `itzg/minecraft-server` container
+  Should be attached read-only to the same volume as the `/data` of the `panzer1119/minecraft-server` container
 - `/backups` :
   The volume where incremental tgz files will be created, if using tar backup method.
 
@@ -217,7 +217,7 @@ docker-compose exec backups backup now
 This mechanism can also be used to avoid a long running container completely by running a temporary container, such as:
 
 ```shell
-docker run --rm ...data and backup -v args... itzg/mc-backup backup now
+docker run --rm ...data and backup -v args... panzer1119/mc-backup backup now
 ```
 
 ## Backup scripts
@@ -261,7 +261,7 @@ services:
     volumes:
       - mc:/data
   backups:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       BACKUP_INTERVAL: "2h"
       RCON_HOST: mc
@@ -337,7 +337,7 @@ services:
   # "init" container for mc to restore the data volume when empty    
   restore-backup:
     # Same image as mc, but any base image with bash and tar will work
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     restart: "no"
     entrypoint: restore-tar-backup
     volumes:
@@ -346,7 +346,7 @@ services:
       # Must be same mount as backups service, but can be read-only
       - ./mc-backups:/backups:ro
   backups:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     depends_on:
       mc:
         condition: service_healthy
@@ -367,7 +367,7 @@ Setup the rclone configuration for the desired remote location
 docker run -it --rm -v rclone-config:/config/rclone rclone/rclone config
 ```
 
-Setup the `itzg/mc-backup` container with the following specifics
+Setup the `panzer1119/mc-backup` container with the following specifics
 - Set `BACKUP_METHOD` to `restic`
 - Set `RESTIC_PASSWORD` to a restic backup repository password to use
 - Use `rclone:` as the prefix on the `RESTIC_REPOSITORY`
@@ -387,7 +387,7 @@ services:
     volumes:
       - mc:/data
   backup:
-    image: itzg/mc-backup
+    image: panzer1119/mc-backup
     environment:
       RCON_HOST: mc
       BACKUP_METHOD: restic
