@@ -63,7 +63,8 @@ RUN apk -U --no-cache add \
     lzop \
     xz \
     zstd \
-    jq
+    jq \
+    borgbackup
 
 
 COPY --from=builder /opt/rcon-cli /opt/rcon-cli
