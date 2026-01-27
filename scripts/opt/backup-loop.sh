@@ -23,7 +23,7 @@ fi
 : "${BACKUP_ON_STARTUP:=true}"
 : "${PAUSE_IF_NO_PLAYERS:=false}"
 : "${PLAYERS_ONLINE_CHECK_INTERVAL:=5m}"
-: "${BACKUP_METHOD:=tar}" # currently one of tar, restic, rsync
+: "${BACKUP_METHOD:=tar}" # currently one of tar, restic, rsync, borg
 : "${TAR_COMPRESS_METHOD:=gzip}"  # bzip2 gzip lzip lzma lzop xz zstd
 : "${TAR_COMPRESS_PARAMETERS:=}"
 : "${PRUNE_BACKUPS_DAYS:=7}"
@@ -53,6 +53,19 @@ fi
 : "${RCLONE_COMPRESS_METHOD:=gzip}"
 : "${RCLONE_REMOTE:=}"
 : "${RCLONE_DEST_DIR:=}"
+: "${BORG_REPOSITORY:=/borg}"
+: "${BORG_ENCRYPTION_METHOD:=authenticated}"
+: "${BORG_PASSPHRASE:=}"
+: "${BORG_PASSPHRASE_FILE:=}"
+: "${BORG_PASSPHRASE_COMMAND:=}"
+: "${BORG_COMPRESS_METHOD:=lz4}"
+: "${BORG_ARCHIVE_PREFIX:=}"
+: "${BORG_ARCHIVE_SUFFIX:=}"
+: "${BORG_BASE_DIR:=/tmp/borg}"
+: "${BORG_RELOCATED_REPO_ACCESS_IS_OK:=yes}"
+: "${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:=yes}"
+: "${BORG_PRUNE_GFS:=}"
+: "${BORG_VERBOSE:=false}"
 : "${PRE_SAVE_ALL_SCRIPT:=}"
 : "${PRE_BACKUP_SCRIPT:=}"
 : "${PRE_SAVE_ON_SCRIPT:=}"
@@ -69,6 +82,9 @@ export XDG_CONFIG_HOME
 export SRC_DIR
 export DEST_DIR
 export BACKUP_NAME
+export BORG_BASE_DIR
+export BORG_RELOCATED_REPO_ACCESS_IS_OK
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK
 
 resolve_backup_name() {
   if ! isTrue "$NAME_WITH_VERSION"; then
@@ -258,6 +274,25 @@ load_rcon_password() {
     RCON_PASSWORD=minecraft
   fi
   export RCON_PASSWORD
+}
+
+load_borg_passphrase() {
+  if [[ -v BORG_PASSPHRASE_COMMAND ]] && [[ -n "${BORG_PASSPHRASE_COMMAND}" ]]; then
+    if ! BORG_PASSPHRASE="$(eval "${BORG_PASSPHRASE_COMMAND}")"; then
+      log ERROR "BORG_PASSPHRASE_COMMAND failed to execute"
+      return 1
+    fi
+  elif [[ -v BORG_PASSPHRASE_FILE ]] && [[ -n "${BORG_PASSPHRASE_FILE}" ]]; then
+    if [ ! -e "${BORG_PASSPHRASE_FILE}" ]; then
+      log ERROR "Borg passphrase file ${BORG_PASSPHRASE_FILE} does not exist."
+      log ERROR "If you are using Docker Secrets feature, please check this for further information: "
+      log ERROR " https://docs.docker.com/engine/swarm/secrets"
+      return 1
+    else
+      BORG_PASSPHRASE=$(cat "${BORG_PASSPHRASE_FILE}")
+    fi
+  fi
+  export BORG_PASSPHRASE
 }
 
 #####################
@@ -669,6 +704,233 @@ rclone() {
             >(awk '{ printf "Removing %s\n", $0 }' | log INFO) \
             >(while read -r path; do command rclone deletefile "${RCLONE_REMOTE}:${path}"; done)
     fi
+  }
+  call_if_function_exists "${@}"
+}
+
+# shellcheck disable=SC2317
+borg() {
+  readarray -td, includes_patterns < <(printf '%s' "${INCLUDES:-.}")
+
+  _check() {
+      #TODO Does this need the passphrase?
+      if ! output="$(command borg check "${BORG_REPOSITORY}" 2>&1)"; then
+        log ERROR "Borg repository contains errors! Aborting"
+        <<<"${output}" log ERROR
+        return 1
+      fi
+  }
+
+  init() {
+    : "${SKIP_LOCKING:=true}"
+
+    #TODO Parse exit codes and handle them accordingly
+    #export BORG_EXIT_CODES=modern
+
+    # Validate encryption method
+    local valid_authenticated_methods=("authenticated" "authenticated-blake2")
+    local valid_encrypted_methods=("keyfile" "keyfile-blake2" "repokey" "repokey-blake2")
+    local valid_encryption_methods=("none" "${valid_authenticated_methods[@]}" "${valid_encrypted_methods[@]}")
+    if ! is_elem_in_array "${BORG_ENCRYPTION_METHOD}" "${valid_encryption_methods[@]}"; then
+      log ERROR "Invalid BORG_ENCRYPTION_METHOD: ${BORG_ENCRYPTION_METHOD}"
+      log ERROR "Valid methods are: ${valid_encryption_methods[*]}"
+      return 1
+    fi
+    local is_encrypted
+    if is_elem_in_array "${BORG_ENCRYPTION_METHOD}" "${valid_encrypted_methods[@]}"; then
+      is_encrypted=true
+    else
+      is_encrypted=false
+    fi
+
+    # Load passphrase if encryption is enabled
+    if [ "${BORG_ENCRYPTION_METHOD}" != "none" ]; then
+      if ! load_borg_passphrase; then
+        log ERROR "Failed to load borg passphrase"
+        return 1
+      fi
+      if [ -z "${BORG_PASSPHRASE:-}" ] && [ "${is_encrypted}" = true ]; then
+        log WARN "BORG_ENCRYPTION_METHOD is set to ${BORG_ENCRYPTION_METHOD} but no passphrase is available"
+      fi
+    fi
+
+    if [ -z "${BORG_REPOSITORY:-}" ]; then
+      log ERROR "BORG_REPOSITORY is not set!"
+      return 1
+    fi
+
+    borg_common_options=()
+    borg_create_options=()
+    borg_prune_options=()
+    if isDebug; then
+      borg_common_options+=(--debug)
+    fi
+    if isTrue "${BORG_VERBOSE}"; then
+      borg_common_options+=(--verbose)
+      borg_common_options+=(--progress)
+      borg_create_options+=(--stats)
+      borg_prune_options+=(--stats)
+    fi
+    readonly borg_common_options
+    #log DEBUG "borg_common_options: ${borg_common_options[*]}"
+    readonly borg_create_options
+    #log DEBUG "borg_create_options: ${borg_create_options[*]}"
+
+    if output="$(command borg info "${BORG_REPOSITORY}" 2>&1 >/dev/null)"; then
+      log INFO "Borg repository already initialized"
+      # Parse existing repository encryption method
+      if repo_info="$(command borg info --json "${BORG_REPOSITORY}" 2>&1)"; then
+        repo_encryption="$(jq -r '.encryption.mode // "unknown"' <<<"${repo_info}")"
+        if [ "${repo_encryption}" != "unknown" ]; then
+          if [ "${repo_encryption}" != "${BORG_ENCRYPTION_METHOD}" ]; then
+            log WARN "Existing repository has encryption '${repo_encryption}' but BORG_ENCRYPTION_METHOD is set to '${BORG_ENCRYPTION_METHOD}'"
+            log WARN "Using the repository's stored encryption configuration"
+          fi
+        fi
+      else
+        log WARN "Unable to parse repository encryption info, proceeding with configured encryption method"
+      fi
+      log INFO "Checking repository consistency"
+      _check
+    else
+      log INFO "Initializing new borg repository with encryption method: ${BORG_ENCRYPTION_METHOD}"
+      command borg "${borg_common_options[@]}" init --encryption "${BORG_ENCRYPTION_METHOD}" --make-parent-dirs "${BORG_REPOSITORY}" | log INFO
+    fi
+
+    borg_use_gfs=false
+    # Borg GFS Parsing
+    #borg_keep_secondly=-1 # Do not use this (then we don't need to decide whether to use s or S)
+    borg_keep_yearly=-1
+    borg_keep_monthly=-1
+    borg_keep_weekly=-1
+    borg_keep_daily=-1
+    borg_keep_hourly=-1
+    borg_keep_minutely=-1
+    borg_keep_gfs_log=()
+    if [ -n "${BORG_PRUNE_GFS}" ]; then
+      mapfile -t borg_prune_gfs_array < <(echo "${BORG_PRUNE_GFS}" | tr "," "\n")
+      local unit
+      local value
+      for i in "${borg_prune_gfs_array[@]}"; do
+        unit="${i: -1}"
+        value="${i::-1}"
+        #log DEBUG "${unit}: ${value}"
+        case "${unit}" in
+
+        y)
+          borg_keep_yearly="${value}"
+          ;;
+
+        m)
+          borg_keep_monthly="${value}"
+          ;;
+
+        w)
+          borg_keep_weekly="${value}"
+          ;;
+
+        d)
+          borg_keep_daily="${value}"
+          ;;
+
+        H)
+          borg_keep_hourly="${value}"
+          ;;
+
+        M)
+          borg_keep_minutely="${value}"
+          ;;
+
+        *)
+          log ERROR "Unknown unit \"${unit}\" in BORG_PRUNE_GFS"
+          return 1
+          ;;
+        esac
+      done
+      if ((borg_keep_minutely > -1)); then
+        borg_prune_options+=(--keep-minutely "${borg_keep_minutely}")
+        borg_keep_gfs_log+=("${borg_keep_minutely} minutely")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_hourly > -1)); then
+        borg_prune_options+=(--keep-hourly "${borg_keep_hourly}")
+        borg_keep_gfs_log+=("${borg_keep_hourly} hourly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_daily > -1)); then
+        borg_prune_options+=(--keep-daily "${borg_keep_daily}")
+        borg_keep_gfs_log+=("${borg_keep_daily} daily")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_weekly > -1)); then
+        borg_prune_options+=(--keep-weekly "${borg_keep_weekly}")
+        borg_keep_gfs_log+=("${borg_keep_weekly} weekly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_monthly > -1)); then
+        borg_prune_options+=(--keep-monthly "${borg_keep_monthly}")
+        borg_keep_gfs_log+=("${borg_keep_monthly} monthly")
+        borg_use_gfs=true
+      fi
+      if ((borg_keep_yearly > -1)); then
+        borg_prune_options+=(--keep-yearly "${borg_keep_yearly}")
+        borg_keep_gfs_log+=("${borg_keep_yearly} yearly")
+        borg_use_gfs=true
+      fi
+    fi
+    if ! isTrue "${borg_use_gfs}"; then
+      borg_prune_options+=(--keep-within "${PRUNE_BACKUPS_DAYS}d")
+    fi
+    readonly borg_prune_options
+    #log DEBUG "borg_prune_options: ${borg_prune_options[*]}"
+  }
+  backup() {
+    if [[ ! $1 ]]; then
+      log INTERNALERROR "Backup log path not passed to borg.backup! Aborting"
+      exit 1
+    fi
+
+    # Export passphrase if needed
+    if [ "${BORG_ENCRYPTION_METHOD}" != "none" ]; then
+      if ! load_borg_passphrase; then
+        log ERROR "Failed to load borg passphrase"
+        return 1
+      fi
+    fi
+
+    local ts
+    local cwd
+    local archive
+    ts=$(date --utc +"%Y%m%d-%H%M%S")
+    #ts=$(date --utc --iso-8601=seconds) # Nicer ISO 8601 Format
+    cwd=$(pwd)
+    archive="${BORG_ARCHIVE_PREFIX:=}$(resolve_backup_name)-${ts}${BORG_ARCHIVE_SUFFIX:=}"
+    log INFO "Backing up content in ${SRC_DIR} to ${BORG_REPOSITORY}::${archive}"
+    cd "${SRC_DIR}"
+    command borg "${borg_common_options[@]}" create "${borg_create_options[@]}" --numeric-ids --compression "${BORG_COMPRESS_METHOD:=lz4}" "${excludes[@]}" "${BORG_REPOSITORY}"::"${archive}" "${includes_patterns[@]}" 2>&1 | tee "$1" | log INFO
+    cd "${cwd}"
+  }
+  prune() {
+    # Export passphrase if needed
+    if [ "${BORG_ENCRYPTION_METHOD}" != "none" ]; then
+      if ! load_borg_passphrase; then
+        log ERROR "Failed to load borg passphrase"
+        return 1
+      fi
+    fi
+
+    if ! isTrue "${borg_use_gfs}"; then
+      log INFO "Pruning borg archives older than ${PRUNE_BACKUPS_DAYS} days"
+    else
+      local joined
+      for i in "${borg_keep_gfs_log[@]}"; do
+        joined+="${i}, "
+      done
+      log INFO "Pruning borg archives, keeping ${joined::-2} archives"
+    fi
+    command borg "${borg_common_options[@]}" prune "${borg_prune_options[@]}" --glob-archives "${BORG_ARCHIVE_PREFIX:=}${BACKUP_NAME}-*" "${BORG_REPOSITORY}" | log INFO
+    log INFO "Compacting borg repository"
+    command borg "${borg_common_options[@]}" compact "${BORG_REPOSITORY}" | log INFO
   }
   call_if_function_exists "${@}"
 }
