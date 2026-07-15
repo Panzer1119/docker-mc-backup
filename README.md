@@ -181,6 +181,62 @@ volumes:
     external: true
 ```
 
+#### `borg`
+
+Borg acts as an incremental backup tool that stores data in a Borg repository with built-in deduplication, compression, and optional encryption.
+
+**Basic Configuration:**
+- `BORG_REPOSITORY`=`/borg` : Path to the Borg repository
+- `BORG_COMPRESS_METHOD`=`lz4` : Compression algorithm. Valid values:
+  - `none` : No compression (not recommended)
+  - `lz4[,L]` : Use lz4 compression. Very high speed, very low compression. (default)
+  - `zstd[,L]` : Use zstd (`zstandard`) compression, a modern wide-range algorithm. If you do not explicitly give the compression level L (ranging from 1 to 22), it will use level 3. Archives compressed with zstd are not compatible with borg < 1.1.4.
+  - `zlib[,L]` : Use zlib (`gz`) compression. Medium speed, medium compression. If you do not explicitly give the compression level L (ranging from 0 to 9), it will use level 6. Giving level 0 (means "no compression", but still has zlib protocol overhead) is usually pointless, you better use `none` compression.
+  - `lzma[,L]` : Use lzma (`xz`) compression. Low speed, high compression. If you do not explicitly give the compression level L (ranging from 0 to 9), it will use level 6. Giving levels above 6 is pointless and counterproductive because it does not compress better due to the buffer size used by borg - but it wastes lots of CPU cycles and RAM.
+  Prefix them with `auto,` to use a built-in heuristic to decide per chunk whether to compress or not. The heuristic tries with lz4 whether the data is compressible. For incompressible data, it will not use compression (uses `none`). For compressible data, it uses the given compression. This can be helpful for media files which often cannot be compressed much more.
+- `DEST_DIR` is not used with borg (repository is defined by `BORG_REPOSITORY`)
+
+**Archive Naming:**
+- `BORG_ARCHIVE_PREFIX`= : Optional prefix for archive names
+- `BORG_ARCHIVE_SUFFIX`= : Optional suffix for archive names
+
+**Encryption:**
+- `BORG_ENCRYPTION_METHOD`=`none` : Encryption mode for the repository. Valid values:
+  - `none` : No encryption and no authentication (not recommended)
+  - `authenticated` : No encryption, but authenticated with SHA256 hashing (default)
+  - `authenticated-blake2` : No encryption, but authenticated with BLAKE2 hashing
+  - `keyfile` : Encryption with keyfile in (specified by `BORG_KEYFILE`) and SHA256 hashing
+  - `keyfile-blake2` : Encryption with keyfile in (specified by `BORG_KEYFILE`) and BLAKE2 hashing
+  - `repokey` : Encryption with key stored in repository and SHA256 hashing
+  - `repokey-blake2` : Encryption with key stored in repository and BLAKE2 hashing
+
+When `BORG_ENCRYPTION_METHOD` is neither `none`, `authenticated`, nor `authenticated-blake2`, at least one of the following passphrase variables should set (but does not have to) be set:
+- `BORG_PASSPHRASE` : The passphrase directly in environment variable
+- `BORG_PASSPHRASE_FILE` : Path to a file containing the passphrase (similar to `RCON_PASSWORD_FILE`, works with Docker Secrets)
+- `BORG_PASSPHRASE_COMMAND` : Command to execute that outputs the passphrase
+
+**Pruning:**
+- `BORG_PRUNE_GFS`= : Grandfather-Father-Son pruning scheme. Comma-separated values with unit suffixes:
+  - `y` = yearly, `m` = monthly, `w` = weekly, `d` = daily, `H` = hourly, `M` = minutely
+  - Example: `BORG_PRUNE_GFS=7y,12m,4w,30d,24H` keeps 7 yearly, 12 monthly, 4 weekly, 30 daily, and 24 hourly archives
+  - If not set, `PRUNE_BACKUPS_DAYS` is used instead with `--keep-within`
+
+**Advanced Options:**
+- `BORG_VERBOSE`=`false` : Set to "true" for verbose output
+- `BORG_BASE_DIR`=`/tmp/borg` : Base directory for Borg temporary files
+- `BORG_RELOCATED_REPO_ACCESS_IS_OK`=`yes` : Allow access to repositories that have been moved
+- `BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK`=`yes` : Allow access to repositories with unknown encryption state
+
+**Important Notes:**
+
+⚠️ When using encryption, store passphrases securely using Docker Secrets or environment files, not as plaintext in compose files.
+
+⚠️ If you change `BORG_ENCRYPTION_METHOD` for an existing repository, the existing encryption will be preserved. The configured encryption method is only used when initializing a new repository.
+
+⚠️ Keyfile-based encryption (`keyfile`, `keyfile-blake2`) stores the encryption key in a file specified by `BORG_KEYFILE`. The same keyfile must be provided to access the repository.
+
+⚠️ Repository-key encryption (`repokey`, `repokey-blake2`) stores the encryption key inside the repository but is protected by the passphrase. The same passphrase must be provided to access the repository.
+
 ## Volumes
 
 - `/data` :
