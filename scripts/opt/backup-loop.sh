@@ -66,6 +66,7 @@ fi
 : "${BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK:=yes}"
 : "${BORG_PRUNE_GFS:=}"
 : "${BORG_VERBOSE:=false}"
+: "${BORG_EXIT_CODES:=modern}"
 : "${PRE_SAVE_ALL_SCRIPT:=}"
 : "${PRE_BACKUP_SCRIPT:=}"
 : "${PRE_SAVE_ON_SCRIPT:=}"
@@ -85,6 +86,7 @@ export BACKUP_NAME
 export BORG_BASE_DIR
 export BORG_RELOCATED_REPO_ACCESS_IS_OK
 export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK
+export BORG_EXIT_CODES
 
 resolve_backup_name() {
   if ! isTrue "$NAME_WITH_VERSION"; then
