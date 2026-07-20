@@ -770,6 +770,7 @@ borg() {
       borg_common_options+=(--progress)
       borg_create_options+=(--stats)
       borg_prune_options+=(--stats)
+      borg_prune_options+=(--list)
     fi
     readonly borg_common_options
     #log DEBUG "borg_common_options: ${borg_common_options[*]}"
