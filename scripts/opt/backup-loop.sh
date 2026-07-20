@@ -799,6 +799,7 @@ borg() {
       # Check if repository directory exists and is empty
       if [ -d "${BORG_REPOSITORY}" ] && [ "$(ls -A "${BORG_REPOSITORY}")" ]; then
         log ERROR "Borg repository directory ${BORG_REPOSITORY} exists and is not empty, but borg info failed. Aborting."
+      <<<"${output}" log ERROR
         return 1
       fi
       log INFO "Initializing new borg repository with encryption method: ${BORG_ENCRYPTION_METHOD}"
