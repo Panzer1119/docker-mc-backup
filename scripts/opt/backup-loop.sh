@@ -716,7 +716,7 @@ borg() {
 
   _check() {
       #TODO Does this need the passphrase?
-      if ! output="$(command borg check "${BORG_REPOSITORY}" 2>&1)"; then
+      if ! output="$(command borg check --verbose --progress "${BORG_REPOSITORY}" 2>&1)"; then
         log ERROR "Borg repository contains errors! Aborting"
         <<<"${output}" log ERROR
         return 1
